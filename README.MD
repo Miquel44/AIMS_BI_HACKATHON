@@ -10,7 +10,7 @@ Chronic Kidney Disease (CKD) affects millions of people worldwide and is often d
 
 ## 🎯 What does it do?
 
-It’s a complete system with several steps. First, it extracts records from patient histories. Then, using an LLM, it reads this data and extracts relevant parameters. Afterwards, with our predictive model, it estimates the risk of CKD and provides actionable insights for healthcare professionals.
+It’s a complete system with several steps. First, it extracts records from patient histories. Then, using an LLM, it reads this data and extracts relevant parameters. Afterwards, with our predictive[...]
 
 ## 🚀 Key Features
 
@@ -21,11 +21,11 @@ It’s a complete system with several steps. First, it extracts records from pat
 
 ## Architecture Design
 
-![Modular Architecture](docsiagrams/Arquitectura de Aplicación.png)
+![Modular Architecture](docs/diagrams/Arquitectura%20de%20Aplicación.png)
 
 ### Cloud Infrastructure (AWS)
 
-![AWS Infrastructure](docsiagrams/Arquitectura de Sistema.drawio.png)
+![AWS Infrastructure](docs/diagrams/Arquitectura%20de%20Sistema.drawio.png)
 
 - **High availability**: Deployment across multiple availability zones
 - **Auto scaling**: Auto Scaling groups that adjust to demand
@@ -34,7 +34,7 @@ It’s a complete system with several steps. First, it extracts records from pat
 
 ### Processing Flow
 
-![Flow Diagram](docsiagrams/Diagrama de Actividad.drawio.png)
+![Flow Diagram](docs/diagrams/Diagrama%20de%20Actividad.drawio.png)
 
 ---
 
@@ -98,10 +98,11 @@ It’s a complete system with several steps. First, it extracts records from pat
 ## 👥 Team
 
 Developed by a team committed to improving healthcare through technological innovation.
-- Miquel González 
-- Joel Salvador Tapia
-- Sergio Martínez Pérez
+Miquel González: @Miquel44
 
+Joel Salvador Tapia: @NIU1638962
+
+Sergio Martínez Pére: @opsora20
 ---
 
 **Note**: This project is a support tool and does not replace professional medical judgment.
