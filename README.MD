@@ -2,6 +2,8 @@
 
 A project developed during the **Boehringer Ingelheim Hackathon 2025** to support the early detection of Chronic Kidney Disease (CKD).
 
+DISCLAIMER: This is the solution for the 7th edition of the Boehringer Hackathon in the next link:https://www.boehringer-ingelheim.com/es/comprometidos-por-el-futuro/
+We chose the challenge 2, described below
 ## 💡 Why this project? - Challenge 2
 
 Chronic Kidney Disease (CKD) affects millions of people worldwide and is often detected too late. We believe technology can make a difference by enabling earlier detection and better monitoring.
@@ -96,7 +98,7 @@ It’s a complete system with several steps. First, it extracts records from pat
 ## 👥 Team
 
 Developed by a team committed to improving healthcare through technological innovation.
-- Miquel González
+- Miquel González 
 - Joel Salvador Tapia
 - Sergio Martínez Pérez
 
