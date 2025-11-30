@@ -1,0 +1,10 @@
+{
+    "logistic_regression": {
+        "youden": 0.63395087287875,
+        "probabilistic": 0.020202020202020204
+    },
+    "xgboost": {
+        "youden": 0.8815252780914307,
+        "probabilistic": 0.14141414141414144
+    }
+}

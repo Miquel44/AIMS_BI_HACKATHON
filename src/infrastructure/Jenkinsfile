@@ -1,0 +1,72 @@
+pipeline {
+
+    parameters {
+        string(name: 'ACTION', defaultValue: 'apply', description: 'Set to "delete" to destroy infra; any other value will apply')
+    }
+
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+    }
+
+   agent  any
+    stages {
+        // Declarative pipeline already does an initial SCM checkout to retrieve the Jenkinsfile.
+        // Remove the redundant explicit git checkout to avoid double-checkout issues on private repos.
+        stage('Prepare') {
+            steps {
+                // Ensure Terraform is available on the Windows agent; install to C:\\tools\\terraform for the session if missing
+                bat '''
+                powershell -NoProfile -Command "if (-not (Get-Command terraform -ErrorAction SilentlyContinue)) { $ver='1.5.9'; $zip='terraform_'+$ver+'_windows_amd64.zip'; $uri='https://releases.hashicorp.com/terraform/'+$ver+'/'+$zip; $dest='C:\\tools\\terraform'; New-Item -ItemType Directory -Force -Path $dest | Out-Null; $tmp = $env:TEMP + '\\' + $zip; (New-Object System.Net.WebClient).DownloadFile($uri, $tmp); Expand-Archive -LiteralPath $tmp -DestinationPath $dest -Force; $env:PATH = $dest + ';' + $env:PATH }; terraform --version"
+                echo Repository already checked out by Declarative SCM
+                echo Workspace: %WORKSPACE%
+                '''
+            }
+        }
+        stage('Plan') {
+            steps {
+                script {
+                    // Initialize backend and providers
+                    if (isUnix()) {
+                        sh 'cd src/infrastructure && terraform init -input=false -force-copy'
+                    } else {
+                        bat 'cd src\\infrastructure && terraform init -input=false -force-copy'
+                    }
+
+                    // If ACTION == delete, plan a destroy; otherwise plan apply
+                    if (params.ACTION == 'delete') {
+                        if (isUnix()) {
+                            sh 'cd src/infrastructure && terraform plan -destroy -out tfplan -input=false'
+                            sh 'cd src/infrastructure && terraform show -no-color tfplan > tfplan.txt'
+                        } else {
+                            bat 'cd src\\infrastructure && terraform plan -destroy -out tfplan -input=false'
+                            bat 'cd src\\infrastructure && terraform show -no-color tfplan > tfplan.txt'
+                        }
+                    } else {
+                        if (isUnix()) {
+                            sh 'cd src/infrastructure && terraform plan -out tfplan -input=false'
+                            sh 'cd src/infrastructure && terraform show -no-color tfplan > tfplan.txt'
+                        } else {
+                            bat 'cd src\\infrastructure && terraform plan -out tfplan -input=false'
+                            bat 'cd src\\infrastructure && terraform show -no-color tfplan > tfplan.txt'
+                        }
+                    }
+                }
+            }
+        }
+        // Approval stage removed: pipeline applies automatically
+
+        stage('Apply') {
+            steps {
+                script {
+                    if (isUnix()) {
+                        sh 'cd src/infrastructure && terraform apply -input=false -auto-approve tfplan'
+                    } else {
+                        bat 'cd src\\infrastructure && terraform apply -input=false -auto-approve tfplan'
+                    }
+                }
+            }
+        }
+    }
+
+  }

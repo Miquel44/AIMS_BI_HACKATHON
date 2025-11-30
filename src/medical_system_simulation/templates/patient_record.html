@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" x-data="formData()" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Record</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        .sidebar-panel {
+            position: fixed;
+            top: 0;
+            right: -600px;
+            width: 600px;
+            height: 100vh;
+            background-color: white;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            z-index: 1050;
+            overflow-y: auto;
+        }
+
+        .sidebar-panel.open {
+            right: 0;
+        }
+
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1049;
+            display: none;
+        }
+
+        .sidebar-overlay.show {
+            display: block;
+        }
+
+        .requested-test-item {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 15px;
+            transition: background-color 0.2s;
+        }
+
+        .requested-test-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .file-item {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s;
+        }
+
+        .file-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .file-item.sending {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        /* Truncar texto largo con elipsis */
+        .truncate-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .file-name-container {
+            max-width: 300px;
+        }
+
+        .test-name-container {
+            max-width: 250px;
+        }
+    </style>
+
+    <script>
+        function formData() {
+            return {
+                patient: {{ patient | tojson }},
+                get age() {
+                    const dob = new Date(this.patient.dob);
+                    const diff = Date.now() - dob.getTime();
+                    return Math.abs(new Date(diff).getUTCFullYear() - 1970);
+                },
+
+                reports: [],
+
+                async refreshReports() {
+                    try {
+                        const response = await fetch(`http://localhost:8000/api-get-patient-reports?patient_id=${this.patient.id}`);
+                        const data = await response.json();
+                        if (!data.failed) {
+                            this.reports = data.reports;
+                        } else {
+                            alert('Failed to fetch reports');
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        alert('Error fetching reports');
+                    }
+                },
+
+                tests: [
+                    'Blood Test',
+                    'X-Ray',
+                    'MRI',
+                    'Ultrasound',
+                    'CKD Risk Assesment'
+                ],
+
+                selectedTest: null,
+                additionalNotes: '',
+                requestedTests: [],
+                sidebarOpen: false,
+                sentFiles: [],
+                isLoading: false,
+
+                // Determinar si un test requiere enviar el historial médico
+                requiresMedicalHistory(testName) {
+                    const externalTests = ['CKD Risk Assesment', 'CKD Risk Assessment'];
+                    return externalTests.includes(testName);
+                },
+
+                openTestModal(test) {
+                    this.selectedTest = test;
+                    this.additionalNotes = '';
+                    const modal = new bootstrap.Modal(document.getElementById('testModal'));
+                    modal.show();
+                },
+
+                async submitTest() {
+                    this.isLoading = true;
+
+                    const needsHistory = this.requiresMedicalHistory(this.selectedTest);
+
+                    try {
+                        // Preparar los datos para enviar a la API
+                        const requestData = {
+                            patient_id: this.patient.id,
+                            test_type: this.selectedTest,
+                            notes: this.additionalNotes,
+                            patient_info: this.patient,
+                        };
+
+                        // Solo incluir reports si el test lo requiere
+                        if (needsHistory) {
+                            requestData.reports = this.reports;
+
+                            // Agregar los archivos que se van a enviar (sin resetear los anteriores)
+                            const newFiles = this.reports.map(report => ({
+                                name: report.name,
+                                url: report.url,
+                                status: 'sending',
+                                timestamp: new Date().toLocaleString(),
+                                testName: this.selectedTest,
+                                requestId: Date.now()
+                            }));
+
+                            this.sentFiles = [...newFiles, ...this.sentFiles];
+                        }
+
+                        // Abrir el panel lateral para mostrar el estado
+                        this.sidebarOpen = true;
+
+                        // Cerrar el modal automáticamente
+                        const modalEl = document.getElementById('testModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+
+                        // Llamar a la API (ajusta la URL según tu endpoint)
+                        const response = await fetch(`http://localhost:8000/api-request-patient-test?patient_id=${this.patient.id}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(requestData)
+                        });
+
+                        const result = await response.json();
+
+                        if (!result.failed) {
+                            // Actualizar el estado de los archivos como enviados exitosamente
+                            if (needsHistory && this.sentFiles.length > 0) {
+                                // Solo actualizar los archivos de esta request específica
+                                const currentRequestId = this.sentFiles[0].requestId;
+                                this.sentFiles = this.sentFiles.map(file => {
+                                    if (file.requestId === currentRequestId && file.status === 'sending') {
+                                        return { ...file, status: 'sent' };
+                                    }
+                                    return file;
+                                });
+                            }
+
+                            // Agregar el test a la lista de tests solicitados
+                            this.requestedTests.push({
+                                name: this.selectedTest,
+                                notes: this.additionalNotes,
+                                timestamp: new Date().toLocaleString(),
+                                id: Date.now(),
+                                filesCount: needsHistory ? this.reports.length : 0,
+                                isExternal: needsHistory
+                            });
+
+                            // Recargar automáticamente la lista de archivos después de recibir el PDF
+                            await this.refreshReports();
+                        } else {
+                            // Marcar los archivos con error
+                            if (needsHistory && this.sentFiles.length > 0) {
+                                const currentRequestId = this.sentFiles[0].requestId;
+                                this.sentFiles = this.sentFiles.map(file => {
+                                    if (file.requestId === currentRequestId && file.status === 'sending') {
+                                        return { ...file, status: 'error' };
+                                    }
+                                    return file;
+                                });
+                            }
+                            alert('Error al enviar la solicitud: ' + (result.message || 'Error desconocido'));
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        // Marcar los archivos con error
+                        if (needsHistory && this.sentFiles.length > 0) {
+                            const currentRequestId = this.sentFiles[0].requestId;
+                            this.sentFiles = this.sentFiles.map(file => {
+                                if (file.requestId === currentRequestId && file.status === 'sending') {
+                                    return { ...file, status: 'error' };
+                                }
+                                return file;
+                            });
+                        }
+                        alert('Error al conectar con el servidor');
+                    } finally {
+                        this.isLoading = false;
+
+                        this.additionalNotes = '';
+                    }
+                },
+
+                toggleSidebar() {
+                    this.sidebarOpen = !this.sidebarOpen;
+                },
+
+                removeTest(id) {
+                    this.requestedTests = this.requestedTests.filter(test => test.id !== id);
+                },
+
+                clearSentFiles() {
+                    this.sentFiles = [];
+                },
+
+                init() {
+                    this.refreshReports();
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-light p-4" x-data="formData()" x-init="init()">
+
+<div class="container">
+    <h1 class="mb-4">Patient Record</h1>
+
+    <!-- Patient Information Card -->
+    <div class="card mb-4">
+        <div class="card-header">Personal Information</div>
+        <div class="card-body">
+            <p><strong>ID:</strong> <span x-text="patient.id"></span></p>
+            <p><strong>Name:</strong> <span x-text="patient.name"></span></p>
+            <p><strong>Gender:</strong> <span x-text="patient.gender"></span></p>
+            <p><strong>Date of Birth:</strong> <span x-text="patient.dob"></span></p>
+            <p><strong>Age:</strong> <span x-text="age"></span></p>
+        </div>
+    </div>
+
+    <!-- Reports Section -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Reports</span>
+            <button class="btn btn-sm btn-primary" @click="refreshReports()">Refresh Files</button>
+        </div>
+        <div class="card-body">
+            <ul>
+                <template x-for="file in reports" :key="file.name">
+                    <li><a :href="file.url" x-text="file.name"></a></li>
+                </template>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Test Request Dropdown -->
+    <div class="dropdown mb-4">
+        <button class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">Request Medical Test</button>
+        <ul class="dropdown-menu">
+            <template x-for="test in tests" :key="test">
+                <li><a class="dropdown-item" href="#" @click.prevent="openTestModal(test)" x-text="test"></a></li>
+            </template>
+        </ul>
+    </div>
+
+    <!-- Floating button to open sidebar -->
+    <button
+        class="btn btn-primary position-fixed bottom-0 end-0 m-4 shadow-lg"
+        @click="toggleSidebar()"
+        style="z-index: 1000;">
+        <template x-if="requestedTests.length > 0">
+            <span class="badge bg-danger position-absolute top-0 start-100 translate-middle" x-text="requestedTests.length"></span>
+        </template>
+        <span>📋 View History</span>
+    </button>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="testModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Test</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>You are requesting: <strong x-text="selectedTest"></strong></p>
+                <label class="form-label">Additional Notes</label>
+                <textarea class="form-control" rows="3" x-model="additionalNotes"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" @click="submitTest()">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar Panel for Requested Tests -->
+<div class="sidebar-panel" :class="{ 'open': sidebarOpen }">
+    <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light">
+        <h5 class="mb-0">Test Request Details</h5>
+        <button class="btn-close" @click="toggleSidebar()"></button>
+    </div>
+
+    <div class="sidebar-content p-3">
+        <!-- Loading Indicator -->
+        <template x-if="isLoading">
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Sending request...</p>
+            </div>
+        </template>
+
+        <!-- Sent Files Section - Mostrar primero -->
+        <div class="mb-4" x-show="sentFiles.length > 0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">📁 Patient Files Sent</h6>
+                <span class="badge bg-primary" x-text="sentFiles.length + ' files'"></span>
+            </div>
+
+            <div class="border rounded">
+                <template x-for="(file, index) in sentFiles" :key="index">
+                    <div class="file-item" :class="{'sending': file.status === 'sending'}">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-secondary me-2" style="font-size: 0.65rem;" x-text="file.testName"></span>
+                                    <div class="fw-bold file-name-container truncate-text" x-text="file.name"></div>
+                                </div>
+                                <small class="text-muted" x-text="file.timestamp"></small>
+                            </div>
+                            <div class="ms-2">
+                                <template x-if="file.status === 'sending'">
+                                    <span class="badge bg-warning text-dark status-badge">
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                        Sending...
+                                    </span>
+                                </template>
+                                <template x-if="file.status === 'sent'">
+                                    <span class="badge bg-success status-badge">✓ Sent</span>
+                                </template>
+                                <template x-if="file.status === 'error'">
+                                    <span class="badge bg-danger status-badge">✗ Error</span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Requested Tests History -->
+        <div class="border-top pt-3">
+            <h6 class="mb-3">📋 Request History</h6>
+
+            <template x-if="requestedTests.length === 0 && sentFiles.length === 0">
+                <div class="text-center text-muted py-5">
+                    <p>No tests requested yet</p>
+                    <small>Request a test to see it here</small>
+                </div>
+            </template>
+
+            <div>
+                <template x-for="test in requestedTests" :key="test.id">
+                    <div class="requested-test-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex-grow-1" style="min-width: 0;">
+                                <div class="mb-1">
+                                    <span class="badge bg-info text-dark me-2">Test</span>
+                                    <span class="d-inline-block truncate-text" style="max-width: 250px; vertical-align: middle;" x-text="test.name"></span>
+                                </div>
+                                <small class="text-muted">
+                                    🕒 <span x-text="test.timestamp"></span>
+                                </small>
+                                <template x-if="test.filesCount">
+                                    <div class="mt-1">
+                                        <small class="text-success">
+                                            ✓ <span x-text="test.filesCount"></span> file(s) sent successfully
+                                        </small>
+                                    </div>
+                                </template>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger ms-2" @click="removeTest(test.id)" title="Remove">
+                                ✕
+                            </button>
+                        </div>
+                        <template x-if="test.notes">
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small class="text-secondary">
+                                    <strong>Notes:</strong> <span x-text="test.notes"></span>
+                                </small>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Clear History Button -->
+        <template x-if="requestedTests.length > 0">
+            <div class="text-center mt-3 pt-3 border-top">
+                <button class="btn btn-sm btn-outline-secondary" @click="requestedTests = []; sentFiles = []">
+                    Clear History
+                </button>
+            </div>
+        </template>
+    </div>
+</div>
+
+<!-- Overlay -->
+<div class="sidebar-overlay" :class="{ 'show': sidebarOpen }" @click="toggleSidebar()"></div>
+
+</body>
+</html>

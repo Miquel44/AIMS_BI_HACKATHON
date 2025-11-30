@@ -1,0 +1,18 @@
+{
+    "timestamp": "20251130_000518",
+    "data_shape": [
+        1659,
+        54
+    ],
+    "train_size": 1161,
+    "val_size": 166,
+    "models": [
+        "logistic_regression",
+        "xgboost"
+    ],
+    "feature_count": 51,
+    "class_distribution": {
+        "no_ckd": 94,
+        "ckd": 1067
+    }
+}

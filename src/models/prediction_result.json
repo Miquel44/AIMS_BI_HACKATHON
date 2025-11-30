@@ -1,0 +1,73 @@
+{
+    "patient_id": "204-305-2619-0",
+    "probability": 0.6666613817214966,
+    "diagnosis": "No CKD",
+    "threshold_used": 0.8815252780914307,
+    "threshold_type": "youden",
+    "confidence": 0.24374105036258698,
+    "distance_to_threshold": 0.21486389636993408,
+    "interpretation": "Riesgo medio-bajo de CKD - Mantener h\u00e1bitos saludables",
+    "top_features": [
+        {
+            "feature": "SerumCreatinine",
+            "importance": 0.09589362889528275,
+            "value": 0.7,
+            "interpretation": "Normal (0.70 mg/dL)"
+        },
+        {
+            "feature": "ProteinInUrine",
+            "importance": 0.075428307056427,
+            "value": -1.0,
+            "interpretation": "Valor: -1.0"
+        },
+        {
+            "feature": "GFR",
+            "importance": 0.053661976009607315,
+            "value": 117.0,
+            "interpretation": "Normal - Funci\u00f3n renal \u00f3ptima (117.0 mL/min)"
+        },
+        {
+            "feature": "SleepQuality",
+            "importance": 0.05215471237897873,
+            "value": -1.0,
+            "interpretation": "Valor: -1.0"
+        },
+        {
+            "feature": "BUNLevels",
+            "importance": 0.03559360280632973,
+            "value": 11.0,
+            "interpretation": "Normal (11.0 mg/dL)"
+        },
+        {
+            "feature": "SystolicBP",
+            "importance": 0.034094974398612976,
+            "value": -1.0,
+            "interpretation": "Valor: -1.0"
+        },
+        {
+            "feature": "ACR",
+            "importance": 0.03328077867627144,
+            "value": -1.0,
+            "interpretation": "Valor: -1.0"
+        },
+        {
+            "feature": "Age",
+            "importance": 0.029486240819096565,
+            "value": -1.0,
+            "interpretation": "Valor: -1.0"
+        },
+        {
+            "feature": "Gender",
+            "importance": 0.02861471101641655,
+            "value": -1.0,
+            "interpretation": "Valor: -1.0"
+        },
+        {
+            "feature": "CholesterolHDL",
+            "importance": 0.0281158909201622,
+            "value": -1.0,
+            "interpretation": "Valor: -1.0"
+        }
+    ],
+    "data_completeness": 1.0
+}
