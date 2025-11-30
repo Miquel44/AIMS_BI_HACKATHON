@@ -98,11 +98,14 @@ It’s a complete system with several steps. First, it extracts records from pat
 ## 👥 Team
 
 Developed by a team committed to improving healthcare through technological innovation.
+
 Miquel González: @Miquel44
 
 Joel Salvador Tapia: @NIU1638962
 
-Sergio Martínez Pére: @opsora20
+Sergio Martínez Pérez: @opsora20
+
+
 ---
 
 **Note**: This project is a support tool and does not replace professional medical judgment.
