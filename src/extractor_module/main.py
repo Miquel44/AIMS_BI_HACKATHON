@@ -25,7 +25,6 @@ def origin():
 def api_patient_cdk_test():
     # Obtener datos del formulario
     patient_id = environment.flask.request.form.get('patient_id')
-    test_type = environment.flask.request.form.get('test_type')
     notes = environment.flask.request.form.get('notes', '')
 
     if not patient_id:
@@ -35,12 +34,11 @@ def api_patient_cdk_test():
     files = environment.flask.request.files.getlist('reports')
 
     if not files:
-        return environment.flask.jsonify({"failed": True, "error": "No PDF files received"}), 400
+        return environment.flask.jsonify(
+            {"failed": True, "error": "No PDF files received"}
+        ), 400
 
     saved_files = []
-
-    # Asegurar que existe el directorio tmp
-    environment.paths.tmp.mkdir(parents=True, exist_ok=True)
 
     # Guardar cada archivo PDF en tmp
     blood_test_path = None
@@ -49,8 +47,8 @@ def api_patient_cdk_test():
             file_path = environment.paths.tmp.joinpath(file.filename)
             file.save(str(file_path))
             saved_files.append(file.filename)
-            # Buscar específicamente Blood_Test_2025.pdf
-            if file.filename == "Blood_Test_2025.pdf":
+            # Buscar específicamente Blood Test
+            if file.filename.find('Blood') != -1:
                 blood_test_path = file_path
 
     # Procesar solo Blood_Test_2025.pdf
@@ -60,7 +58,7 @@ def api_patient_cdk_test():
             patient_data = extractor.extract_patient_data_from_pdf(
                 str(blood_test_path))
 
-            # Enviar al modelo (puerto 8002)
+            # Enviar al modelo
             model_response = environment.requests.post(
                 f"{environment.variables.model_api_address}/api-asses-risk",
                 json={
@@ -87,7 +85,7 @@ def api_patient_cdk_test():
         'message': 'CKD test completed',
         'patient_id': patient_id,
         'files_saved': saved_files,
-        'processed_file': 'Blood_Test_2025.pdf' if blood_test_path else None,
+        'processed_file': blood_test_path,
         'data_extracted': patient_data,
         'model_prediction': model_result
     }
