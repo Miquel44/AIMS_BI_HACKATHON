@@ -37,14 +37,6 @@ def api_patient_cdk_test():
     if not files:
         return environment.flask.jsonify({"failed": True, "error": "No PDF files received"}), 400
 
-    # Log para debug
-    print("=" * 50)
-    print("EXTRACTOR MODULE - Received CKD test request:")
-    print(f"  Patient ID: {patient_id}")
-    print(f"  Test Type: {test_type}")
-    print(f"  Notes: {notes}")
-    print(f"  Reports: {len(files)} files")
-
     saved_files = []
 
     # Asegurar que existe el directorio tmp
@@ -57,25 +49,18 @@ def api_patient_cdk_test():
             file_path = environment.paths.tmp.joinpath(file.filename)
             file.save(str(file_path))
             saved_files.append(file.filename)
-            print(f"    - Saved: {file.filename} -> {file_path}")
-
             # Buscar específicamente Blood_Test_2025.pdf
             if file.filename == "Blood_Test_2025.pdf":
                 blood_test_path = file_path
 
-    print("=" * 50)
-
     # Procesar solo Blood_Test_2025.pdf
     patient_data = None
     if blood_test_path and blood_test_path.exists():
-        print(f"Procesando: Blood_Test_2025.pdf")
         try:
             patient_data = extractor.extract_patient_data_from_pdf(
                 str(blood_test_path))
-            print("Datos extraídos exitosamente")
 
             # Enviar al modelo (puerto 8002)
-            print("Enviando datos al modelo...")
             model_response = environment.requests.post(
                 f"{environment.variables.model_api_address}/api-asses-risk",
                 json={
@@ -84,27 +69,17 @@ def api_patient_cdk_test():
                 },
                 timeout=30
             )
-            print(f" Respuesta del modelo: {
-                  model_response.status_code}", "Response:", model_response.text)
             model_result = model_response.json() if model_response.status_code == 200 else None
-        except Exception as e:
-            print(f"Error: {e}")
+        except Exception:
             model_result = None
         finally:
             for file in files:
                 if file and file.filename:
                     file_path = environment.paths.tmp.joinpath(file.filename)
-                    try:
-                        if file_path.exists():
-                            file_path.unlink()   # DELETE the file
-                            print(f"File deleted: {file_path}")
-                    except Exception as delete_error:
-                        print(
-                            "File couldn't be deleted " +
-                            f"{file_path}: {delete_error}"
-                        )
+                    if file_path.exists():
+                        file_path.unlink()
+
     else:
-        print("Blood_Test_2025.pdf no encontrado")
         model_result = None
     # Respuesta exitosa
     response_data = {
