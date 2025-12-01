@@ -90,6 +90,19 @@ def api_patient_cdk_test():
         except Exception as e:
             print(f"Error: {e}")
             model_result = None
+        finally:
+            for file in files:
+                if file and file.filename:
+                    file_path = environment.paths.tmp.joinpath(file.filename)
+                    try:
+                        if file_path.exists():
+                            file_path.unlink()   # DELETE the file
+                            print(f"File deleted: {file_path}")
+                    except Exception as delete_error:
+                        print(
+                            "File couldn't be deleted " +
+                            f"{file_path}: {delete_error}"
+                        )
     else:
         print("Blood_Test_2025.pdf no encontrado")
         model_result = None
