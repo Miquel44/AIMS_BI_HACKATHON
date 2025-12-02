@@ -51,13 +51,15 @@ def api_send_response():
         upload_url = f'{medical_api}/api-save-patient-report'
 
         with open(pdf_filename, 'rb') as pdf_file:
-            files = {'report': (os.path.basename(pdf_filename), pdf_file, 'application/pdf')}
+            files = {'report': (environment.os.path.basename(
+                pdf_filename), pdf_file, 'application/pdf')}
             form_data = {
                 'patient_id': patient_id,
-                'file_name': os.path.basename(pdf_filename)
+                'file_name': environment.os.path.basename(pdf_filename)
             }
 
-            response = environment.requests.post(upload_url, files=files, data=form_data)
+            response = environment.requests.post(
+                upload_url, files=files, data=form_data)
 
         # Devolver confirmación
         response = environment.flask.make_response(
